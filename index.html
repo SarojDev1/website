@@ -1,359 +1,186 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>FF 12 Teams Mobile Panel</title>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roster Maker</title>
 
-    <style>
-      body {
-        margin: 0;
-        background: transparent;
-        color: white;
-        font-family: "EAGLORE", sans-serif;
-        overflow: hidden;
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#111;color:white;font-family:Arial;padding:12px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px}
+input,button{padding:10px;border-radius:6px;border:0}
+button{background:#ff3c00;color:white;font-weight:bold}
+
+#poster{
+  width:100%;
+  max-width:1000px;
+  aspect-ratio:16/9;
+  margin:auto;
+  position:relative;
+  overflow:hidden;
+  background:radial-gradient(circle,#ff3b00,#4b0505 75%);
+}
+
+#poster:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+  linear-gradient(to top,rgba(0,0,0,.9),transparent 45%),
+  linear-gradient(to right,rgba(0,0,0,.65),transparent,rgba(0,0,0,.65));
+  z-index:2;
+}
+
+#teamName{
+  position:absolute;
+  top:25px;
+  width:100%;
+  text-align:center;
+  font-size:46px;
+  color:#ffd36a;
+  z-index:5;
+  text-shadow:0 0 15px #000;
+}
+
+.players{
+  position:absolute;
+  bottom:-5px;
+  left:50%;
+  transform:translateX(-50%);
+  width:105%;
+  height:96%;
+  display:flex;
+  justify-content:center;
+  align-items:flex-end;
+  z-index:3;
+}
+
+.playerBox{
+  width:24%;
+  height:92%;
+  margin-left:-3%;
+  position:relative;
+  overflow:hidden;
+}
+
+.playerBox:first-child{margin-left:0}
+
+.playerBox img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:top center;
+  filter:drop-shadow(0 0 18px #000);
+}
+
+.playerBox:nth-child(1),
+.playerBox:nth-child(4){
+  height:84%;
+  z-index:2;
+}
+
+.playerBox:nth-child(2),
+.playerBox:nth-child(3){
+  height:96%;
+  z-index:4;
+}
+
+.playerBox:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(to top,rgba(0,0,0,.65),transparent 35%);
+}
+
+@media(max-width:600px){
+  #teamName{font-size:24px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="controls">
+  <input type="file" id="bgUpload" accept="image/*">
+  <input type="text" id="nameInput" placeholder="Team name optional">
+
+  <input type="file" class="playerUpload" accept="image/*">
+  <input type="file" class="playerUpload" accept="image/*">
+  <input type="file" class="playerUpload" accept="image/*">
+  <input type="file" class="playerUpload" accept="image/*">
+
+  <button onclick="downloadPoster()">Download</button>
+</div>
+
+<div id="poster">
+  <h1 id="teamName"></h1>
+
+  <div class="players">
+    <div class="playerBox"><img></div>
+    <div class="playerBox"><img></div>
+    <div class="playerBox"><img></div>
+    <div class="playerBox"><img></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script>
+const poster = document.getElementById("poster");
+const bgUpload = document.getElementById("bgUpload");
+const nameInput = document.getElementById("nameInput");
+const teamName = document.getElementById("teamName");
+const uploads = document.querySelectorAll(".playerUpload");
+const players = document.querySelectorAll(".playerBox img");
+
+bgUpload.addEventListener("change", function(){
+  const file = this.files[0];
+  if(!file) return;
+
+  const url = URL.createObjectURL(file);
+  poster.style.backgroundImage =
+  `linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.15)),url(${url})`;
+  poster.style.backgroundSize = "cover";
+  poster.style.backgroundPosition = "center";
+});
+
+nameInput.addEventListener("input", function(){
+  teamName.innerText = this.value;
+});
+
+uploads.forEach((input,index)=>{
+  input.addEventListener("change",function(){
+    const file = this.files[0];
+    if(!file) return;
+
+    players[index].src = URL.createObjectURL(file);
+  });
+});
+
+function downloadPoster(){
+  html2canvas(poster,{
+    scale:3,
+    useCORS:true,
+    backgroundColor:null
+  }).then(canvas=>{
+    canvas.toBlob(function(blob){
+      const file = new File([blob], "roster-poster.png", {type:"image/png"});
+
+      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({
+          files:[file],
+          title:"Roster Poster"
+        });
+      }else{
+        const link = document.createElement("a");
+        link.download = "roster-poster.png";
+        link.href = URL.createObjectURL(blob);
+        link.click();
       }
+    });
+  });
+}
+</script>
 
-      .panel {
-        position: absolute;
-        right: 0;
-        top: 0;
-        padding: 10px;
-      }
-
-      /**************************
-        WINNER BOX
-      **************************/
-      .winner-box {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        padding: 10px;
-        margin-bottom: 10px;
-        background: linear-gradient(135deg, #ffd35c22, #ffd35c44);
-        border: 2px solid #ffd35c;
-        border-radius: 8px;
-        font-size: 20px;
-        font-weight: 600;
-        color: white;
-        opacity: 0;
-        transform: translateY(-40px);
-        transition: all 0.45s ease-out;
-        height: auto;
-        width: 370px;
-        height: 20vh;
-      }
-
-      .winner-box.start-anim {
-        opacity: 1 !important;
-        transform: translateY(0) !important;
-      }
-
-      .winner-box.exit-anim {
-        opacity: 0 !important;
-        transform: translateY(-40px) !important;
-      }
-
-      .winner-name {
-        position: relative;
-      }
-
-      /**************************
-        WINNER IMAGE WRAPPER
-      **************************/
-      .winner-team-wrapper {
-        display: flex;
-        justify-content: center;
-      }
-
-      .winner-team {
-        height: 15vh;
-        border-radius: 6px;
-        object-fit: cover;
-        position: relative;
-        top: 20px;
-      }
-
-      /**************************
-        RANK 1 ROW INSIDE WINNER BOX
-      **************************/
-      .top-row {
-        display: grid;
-        grid-template-columns: 50px 270px 60px 60px;
-        gap: 0;
-        width: 100%;
-      }
-
-      .top-row .cell {
-        border: 1px solid #ffd35c22;
-        background: linear-gradient(135deg, #000000, #ffd35c44);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 25px;
-        letter-spacing: 1px;
-        color: white;
-      }
-
-      .top-row .team-cell {
-        justify-content: left;
-        gap: 6px;
-      }
-
-      .logo {
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-        object-fit: cover;
-      }
-
-      .points {
-        color: #ffd35c;
-        font-weight: 600;
-      }
-
-      /**************************
-        HEADER
-      **************************/
-      .header {
-        display: grid;
-        grid-template-columns: 55px 270px 60px 60px;
-        margin-bottom: 8px;
-        opacity: 0;
-        transform: translateX(40px);
-        transition: all 0.45s ease-out;
-      }
-
-      .header.start-anim {
-        opacity: 1 !important;
-        transform: translateX(0) !important;
-      }
-
-      .header.exit-anim {
-        opacity: 0 !important;
-        transform: translateX(40px) !important;
-      }
-
-      .header div {
-        padding: 10px 6px;
-        background: #9e7913;
-        border: 1px solid white;
-        text-align: center;
-        font-size: 25px;
-        font-weight: 500;
-        box-shadow: linear-gradient(135deg, #000000, #ffd35c44);
-      }
-
-      /**************************
-        TABLE ROWS
-      **************************/
-      .table {
-        width: 100%;
-      }
-
-      .row-wrapper {
-        width: 100%;
-        display: grid;
-        grid-template-columns: 55px 270px 60px 60px;
-        margin-bottom: 6px;
-        opacity: 0;
-        transform: translateX(40px);
-        transition: all 0.45s ease-out;
-      }
-
-      .row-wrapper.start-anim {
-        opacity: 1 !important;
-        transform: translateX(0) !important;
-      }
-
-      .row-wrapper.exit-anim {
-        opacity: 0 !important;
-        transform: translateX(40px) !important;
-      }
-
-      .cell {
-        padding: 8px 6px;
-        border: 1px solid #ffd35c22;
-        background: linear-gradient(135deg, #1c1c1c, #292829);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-        letter-spacing: 1px;
-        color: white;
-      }
-
-      .team-cell {
-        justify-content: left;
-        gap: 12px;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="panel">
-      <!-- WINNER BOX -->
-      <div id="winner-box" class="winner-box">
-        <!-- IMAGE WRAPPER -->
-        <div class="winner-team-wrapper">
-          <img id="winner-team" class="winner-team" src="" />
-        </div>
-        <div id="winner-name" class="winner-name"></div>
-
-        <!-- RANK 1 ROW INSIDE WINNER BOX -->
-        <div id="rank1-row" class="top-row">
-          <div class="cell" id="r1-rank"></div>
-          <div class="cell team-cell">
-            <img id="r1-logo" class="logo" src="" />
-            <span id="r1-team"></span>
-          </div>
-          <div class="cell" id="r1-kills"></div>
-          <div class="cell points" id="r1-points"></div>
-        </div>
-      </div>
-
-      <!-- HEADER -->
-      <div id="header" class="header">
-        <div>RANK</div>
-        <div>TEAM</div>
-        <div>KILLS</div>
-        <div>PTS</div>
-      </div>
-
-      <div id="table" class="table"></div>
-    </div>
-
-    <script>
-      const SHEET_URL =
-        "https://docs.google.com/spreadsheets/d/1S1PkVH9RY2UBnEgBaxOvd-D4vI5S1anYR0IgGlwGCKc/gviz/tq?gid=1812532198&tqx=out:json";
-
-      let allRows = [];
-
-      async function fetchSheet() {
-        const res = await fetch(SHEET_URL);
-        let text = await res.text();
-        text = text.substring(47, text.length - 2);
-        const json = JSON.parse(text);
-        const rows = json.table.rows;
-
-        allRows = [];
-        for (let i = 0; i <= 20; i++) {
-          const r = rows[i];
-          if (!r) continue;
-
-          const rank = r.c[7]?.v ?? "";
-          const team = r.c[8]?.v ?? "";
-          const kills = r.c[9]?.v ?? "";
-          const points = r.c[10]?.v ?? 0;
-          const logo = r.c[12]?.v ?? "";
-          const winnerTeam = r.c[14]?.v ?? "";
-
-          if (!rank) continue;
-
-          allRows.push({ rank, team, kills, points, logo, winnerTeam });
-        }
-      }
-
-      function renderRows() {
-        const table = document.getElementById("table");
-        table.innerHTML = "";
-
-        if (allRows?.length > 0) {
-          // Winner based on highest points
-          const winner = allRows.reduce(
-            (prev, curr) => (curr.points > prev.points ? curr : prev),
-            allRows[0]
-          );
-
-          document.getElementById(
-            "winner-team"
-          ).src = `../teamPic/${winner?.winnerTeam}`;
-
-          // Rank 1 row inside winner box
-          const rank1 = allRows.find((r) => r.rank == 1 || r.rank == "1");
-          if (rank1) {
-            document.getElementById("r1-rank").textContent = rank1.rank;
-            document.getElementById("r1-team").textContent = rank1.team;
-            document.getElementById("r1-kills").textContent = rank1.kills;
-            document.getElementById("r1-points").textContent = rank1.points;
-            document.getElementById("r1-logo").src = `../logos/${rank1.logo}`;
-          }
-
-          // Render table excluding rank 1
-          allRows
-            .filter((r) => r.rank != 1 && r.rank != "1")
-            .slice(0, 11)
-            .forEach((r, i) => {
-              const wrap = document.createElement("div");
-              wrap.className = "row-wrapper";
-              wrap.style.transitionDelay = `${i * 0.06}s`;
-
-              wrap.innerHTML = `
-                <div class="cell">${r.rank}</div>
-                <div class="cell team-cell">
-                    <img src="../logos/${r.logo}" class="logo" />
-                    <span>${r.team}</span>
-                </div>
-                <div class="cell">${r.kills}</div>
-                <div class="cell points">${r.points}</div>
-              `;
-              table.appendChild(wrap);
-            });
-        }
-      }
-
-      function startAnimation() {
-        document.getElementById("winner-box").classList.add("start-anim");
-        document.getElementById("header").classList.add("start-anim");
-        document.getElementById("rank1-row").classList.add("start-anim");
-
-        document
-          .querySelectorAll(".row-wrapper")
-          .forEach((r) => r.classList.add("start-anim"));
-      }
-
-      function exitAnimation() {
-        document.getElementById("winner-box").classList.add("exit-anim");
-        document.getElementById("header").classList.add("exit-anim");
-        document.getElementById("rank1-row").classList.add("exit-anim");
-
-        document
-          .querySelectorAll(".row-wrapper")
-          .forEach((r) => r.classList.add("exit-anim"));
-      }
-
-      function resetAnimation() {
-        document
-          .getElementById("winner-box")
-          .classList.remove("start-anim", "exit-anim");
-        document
-          .getElementById("header")
-          .classList.remove("start-anim", "exit-anim");
-        document
-          .getElementById("rank1-row")
-          .classList.remove("start-anim", "exit-anim");
-
-        document
-          .querySelectorAll(".row-wrapper")
-          .forEach((r) => r.classList.remove("start-anim", "exit-anim"));
-      }
-      async function run() {
-        await fetchSheet();
-        renderRows();
-
-        // Start animation after a short delay
-        setTimeout(startAnimation, 100);
-
-        // Exit animation after 30 seconds
-        setTimeout(() => {
-          exitAnimation();
-          // Do not call run() again
-        }, 30000);
-      }
-
-      // Only call run() once
-
-      run();
-    </script>
-  </body>
+</body>
 </html>
